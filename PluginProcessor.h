@@ -1,6 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "Core/VoxLevelerCore.h"
+#include "VoxLevelerCore.h"
 
 class VoxLevelerProcessor final : public juce::AudioProcessor,
                                   private juce::AudioProcessorValueTreeState::Listener,
