@@ -1,6 +1,6 @@
 // CRAY LDR VOX LEVELER - core verification suite.
 // Deliberately NOT based on assert(): checks stay active in Release/NDEBUG.
-#include "Core/VoxLevelerCore.h"
+#include "VoxLevelerCore.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
