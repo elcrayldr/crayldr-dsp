@@ -180,7 +180,22 @@ static void test_bright_high_pitch_voice_is_not_rejected() {
 }
 
 static void test_leveling_natural_vs_extreme_and_no_ducking_tail() {
-    const double sr = 48000; Take t = makeTake(sr); VoxLevelerCore core; core.prepare(sr); analyze(core, t.x);
+    const double sr = 48000; Take t = makeTake(sr);
+    // Give the first sustained syllable a deliberately uneven internal envelope.
+    // A perfectly steady synthetic vowel has no intra-syllable level variation
+    // to ride, so it cannot validate the new detail-following stage.
+    {
+        const auto& syllable = t.syl.front();
+        const size_t begin = syllable.b + static_cast<size_t>(0.035 * sr);
+        const size_t end = syllable.e - static_cast<size_t>(0.035 * sr);
+        const double duration = static_cast<double>(end - begin) / sr;
+        for (size_t p = begin; p < end; ++p) {
+            const double phase = static_cast<double>(p - begin) / static_cast<double>(end - begin);
+            const double modulationDb = 3.5 * std::cos(2.0 * M_PI * phase);
+            t.x[p] *= static_cast<float>(std::pow(10.0, modulationDb / 20.0));
+        }
+    }
+    VoxLevelerCore core; core.prepare(sr); analyze(core, t.x);
     auto spread = [&](const std::vector<float>& sig) {
         double mn = 1e9, mx = -1e9;
         for (auto& s : t.syl) { const double d = rmsDb(sig, s.b + (size_t)(0.04 * sr), s.e - (size_t)(0.06 * sr)); mn = std::min(mn, d); mx = std::max(mx, d); }
