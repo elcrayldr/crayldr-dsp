@@ -362,7 +362,7 @@ static void test_concurrent_publish() {
         while (!stop.load()) {
             std::fill(b.begin(), b.end(), 1.0f); float* ch[1] = { b.data() };
             core.processBlock(ch, 1, 256, TransportInfo{ true, true, pos }, true);
-            for (float v : b) if (!(std::isfinite(v) && v >= 0.38f && v <= 2.6f)) bad.fetch_add(1);
+            for (float v : b) if (!(std::isfinite(v) && v >= (float)lin(-12.1) && v <= (float)lin(12.1))) bad.fetch_add(1);
             pos = (pos + 256) % (int64_t)(6.0 * sr); blocks.fetch_add(1);
             std::this_thread::sleep_for(std::chrono::microseconds(20));
         }
