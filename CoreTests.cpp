@@ -193,8 +193,18 @@ static void test_leveling_natural_vs_extreme_and_no_ducking_tail() {
     // v0.1 failure case: a quiet syllable right after a loud one must NOT be ducked.
     const double gLoud = gainDbAt(*sn, sr, (t.syl[0].b + t.syl[0].e) / 2), gQuiet = gainDbAt(*sn, sr, (t.syl[1].b + t.syl[1].e) / 2);
     CHECK(gQuiet - gLoud > 1.0);
-    // no gain riding inside a syllable (not a compressor)
-    for (auto& s : t.syl) { double mn = 1e9, mx = -1e9; for (size_t p = s.b + (size_t)(0.045 * sr); p < s.e - (size_t)(0.065 * sr); p += 48) { const double g = gainDbAt(*sn, sr, p); mn = std::min(mn, g); mx = std::max(mx, g); } CHECK(mx - mn < 0.3); }
+    // The automatic ride must now move within sustained syllables, not only
+    // between event plateaus. Require a measurable intra-event gain contour.
+    double maxIntraRide = 0.0;
+    for (auto& s : t.syl) {
+        double mn = 1e9, mx = -1e9;
+        for (size_t p = s.b + (size_t)(0.045 * sr); p < s.e - (size_t)(0.065 * sr); p += 48) {
+            const double g = gainDbAt(*sn, sr, p);
+            mn = std::min(mn, g); mx = std::max(mx, g);
+        }
+        maxIntraRide = std::max(maxIntraRide, mx - mn);
+    }
+    CHECK(maxIntraRide > 0.30);
     CHECK(core.rebuildCurve(extreme()));
     const double ext = spread(run(core, t.x, 480, 0, true));
     std::printf("    level spread: input %.2f dB | natural %.2f dB | extreme %.2f dB\n", before, nat, ext);
