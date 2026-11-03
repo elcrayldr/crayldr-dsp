@@ -209,6 +209,43 @@ bool buildCurve(const AnalysisGrid& grid, const Settings& st, CurveData& out, Bu
         for (int i = e.b; i < e.e; ++i) { tgt[i] = T; defined[i] = 1; }
     }
 
+    // 5b. Intra-event automatic riding.
+    // The previous engine assigned one constant gain value to each event. That
+    // balanced syllable averages but could not reproduce a hand-drawn vocal ride.
+    // Build a short, non-causal local envelope and continuously correct voiced
+    // nuclei toward the take's weighted reference level. The correction is
+    // deliberately limited; consonants, breaths and unvoiced regions are not
+    // lifted. The later peak guard remains authoritative.
+    {
+        const int radius = (st.mode == Mode::Natural) ? 3 : 2; // 35 ms / 25 ms total window
+        std::vector<float> local(N, 0.0f);
+        for (int i = 0; i < N; ++i) {
+            if (cls[i] != 1) continue;
+            float sum = 0.0f;
+            int count = 0;
+            for (int k = std::max(0, i - radius); k <= std::min(N - 1, i + radius); ++k) {
+                if (cls[k] == 1 && db[k] > -999.0f) { sum += db[k]; ++count; }
+            }
+            if (count > 0) local[i] = sum / static_cast<float>(count);
+        }
+
+        // Use the take-level event reference, but avoid chasing isolated peaks.
+        // Detail correction is strongest on sustained voiced energy and fades
+        // near high-crest-factor attacks (plosives/consonants).
+        const float detailScale = (st.mode == Mode::Natural) ? 0.58f : 0.78f;
+        const float detailLimit = (st.mode == Mode::Natural) ? 3.0f : 4.5f;
+        for (const auto& e : ev) {
+            for (int i = e.b; i < e.e; ++i) {
+                if (cls[i] != 1 || local[i] <= 0.0f) continue;
+                const float crest = pk[i] - db[i];
+                const float transientProtection = clampf(1.0f - (crest - 8.0f) / 12.0f, 0.20f, 1.0f);
+                float detail = (e.level - local[i]) * detailScale * transientProtection * amount;
+                detail = clampf(detail, -detailLimit, detailLimit);
+                tgt[i] = clampf(tgt[i] + detail, -range, range);
+            }
+        }
+    }
+
     // 6. Fill between events. Short gaps: interpolate. Long gaps: hold the
     //    neighbouring plateau for H hops (so the transition happens fully
     //    inside the silence) and return to 0 dB. Unvoiced hops never get boost.
