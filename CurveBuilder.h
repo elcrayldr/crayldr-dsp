@@ -10,9 +10,9 @@ struct BuildReport {
 };
 
 // Offline, non-causal gain-curve construction from a stored analysis.
-// NOT a compressor: gain is piecewise-constant per detected vocal event
-// (plateaus), moved only in the valleys between events with symmetric,
-// look-ahead smoothing. Intra-event dynamics are untouched.
+// NOT a compressor: gain is built from detected vocal events (plateaus),
+// with a restrained zero-mean intra-event ride on voiced nuclei and symmetric
+// look-ahead smoothing. Unvoiced regions are protected from positive gain.
 // "Events/groups/phrases" are ACOUSTIC units (energy nuclei, short-gap
 // clusters, long-gap clusters); no linguistic syllable/word recognition is claimed.
 bool buildCurve(const AnalysisGrid& grid, const Settings& settings, CurveData& out,
