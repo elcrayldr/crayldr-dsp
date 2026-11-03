@@ -12,6 +12,7 @@ struct TransportInfo {
     bool    playing = false;
     bool    positionValid = false;
     int64_t position = 0;          // absolute host timeline sample of the first sample of the block
+    bool    offlineRender = false; // host is rendering offline; position is still required for curve alignment
 };
 
 // Thread model

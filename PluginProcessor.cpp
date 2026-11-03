@@ -59,6 +59,10 @@ void VoxLevelerProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::M
     juce::ScopedNoDenormals noDenormals;
 
     crayldr::TransportInfo t;
+    // Some hosts report isPlaying=false while performing an offline bounce.
+    // JUCE exposes this render mode separately; the timeline position remains
+    // mandatory because the gain curve is indexed to absolute host samples.
+    t.offlineRender = isNonRealtime();
     if (auto* ph = getPlayHead())
     {
         if (auto pos = ph->getPosition())

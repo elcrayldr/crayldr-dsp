@@ -119,11 +119,12 @@ void VoxLevelerCore::processBlock(float* const* ch, int nch, int n, const Transp
                                   bool applyEnabled) noexcept {
     busy_.store(true);
     const int rm = runMode_.load();
-    const bool active = t.playing && t.positionValid && n > 0 && nch > 0;
-    if (active) lastPosition_.store(t.position + n, std::memory_order_relaxed);
+    const bool playing = t.playing && t.positionValid && n > 0 && nch > 0;
+    const bool renderable = t.positionValid && (t.playing || t.offlineRender) && n > 0 && nch > 0;
+    if (renderable) lastPosition_.store(t.position + n, std::memory_order_relaxed);
 
     if (rm == kAnalyzing) {
-        if (active) {
+        if (playing) {
             analyzer_.process(ch, nch, n, t.position, [this](int64_t h, const HopFeatures& f) {
                 const int r = grid_.set(h, f);
                 if (r == 1) coveredHops_.fetch_add(1, std::memory_order_relaxed);
@@ -132,7 +133,7 @@ void VoxLevelerCore::processBlock(float* const* ch, int nch, int n, const Transp
         } else if (wasActive_) {
             stopRequested_.store(true);          // transport stopped while analysing
         }
-    } else if (rm == kIdle && active && applyEnabled) {
+    } else if (rm == kIdle && renderable && applyEnabled) {
         const CurveSnapshot* s = active_.load();
         if (s != nullptr) {
             if (grid_.covered() > 0) {           // stale-analysis monitor: compares INPUT (pre-gain) with stored analysis
@@ -152,7 +153,7 @@ void VoxLevelerCore::processBlock(float* const* ch, int nch, int n, const Transp
             appliedSamples_.fetch_add(static_cast<uint64_t>(n), std::memory_order_relaxed);
         }
     }
-    wasActive_ = active;
+    wasActive_ = playing;
     seq_.fetch_add(1);
     busy_.store(false);
 }
