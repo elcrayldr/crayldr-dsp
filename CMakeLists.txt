@@ -16,10 +16,10 @@ endif()
 
 # ---------------- JUCE-independent DSP core ----------------
 add_library(VoxLevelerCore STATIC
-  Source/Core/CurveBuilder.cpp
-  Source/Core/Serialization.cpp
-  Source/Core/VoxLevelerCore.cpp)
-target_include_directories(VoxLevelerCore PUBLIC Source)
+  CurveBuilder.cpp
+  Serialization.cpp
+  VoxLevelerCore.cpp)
+target_include_directories(VoxLevelerCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(VoxLevelerCore PUBLIC cxx_std_17)
 set_target_properties(VoxLevelerCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if(MSVC)
@@ -31,7 +31,7 @@ endif()
 # ---------------- tests ----------------
 if(CRAYLDR_BUILD_TESTS)
   enable_testing()
-  add_executable(VoxLevelerTests Tests/CoreTests.cpp)
+  add_executable(VoxLevelerTests CoreTests.cpp)
   target_link_libraries(VoxLevelerTests PRIVATE VoxLevelerCore)
   find_package(Threads REQUIRED)
   target_link_libraries(VoxLevelerTests PRIVATE Threads::Threads)
@@ -73,8 +73,8 @@ if(CRAYLDR_BUILD_PLUGIN)
     COPY_PLUGIN_AFTER_BUILD FALSE)
 
   target_sources(CrayLdrVoxLeveler PRIVATE
-    Source/PluginProcessor.cpp Source/PluginProcessor.h
-    Source/PluginEditor.cpp Source/PluginEditor.h)
+    PluginProcessor.cpp PluginProcessor.h
+    PluginEditor.cpp PluginEditor.h)
 
   target_compile_definitions(CrayLdrVoxLeveler PUBLIC
     JUCE_WEB_BROWSER=0
