@@ -117,8 +117,8 @@ void VoxLevelerEditor::resized()
     for (auto pair : { std::make_pair(&amountS, &amountL), std::make_pair(&rangeS, &rangeL), std::make_pair(&ceilS, &ceilL) })
     {
         auto c = knobs.removeFromLeft(kw);
-        pair->second->setBounds(c.removeFromTop(18));
-        pair->first->setBounds(c);
+        pair.second->setBounds(c.removeFromTop(18));
+        pair.first->setBounds(c);
     }
     r.removeFromBottom(8);
     curve.setBounds(r);
