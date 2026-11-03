@@ -84,13 +84,13 @@ static double rmsDb(const std::vector<float>& x, size_t b, size_t e) {
     double s = 0; for (size_t i = b; i < e; ++i) s += (double)x[i] * x[i];
     return 20 * std::log10(std::max(1e-9, std::sqrt(s / (double)(e - b))));
 }
-static std::vector<float> run(VoxLevelerCore& core, const std::vector<float>& in, int block, int64_t startPos, bool apply, bool playing = true) {
+static std::vector<float> run(VoxLevelerCore& core, const std::vector<float>& in, int block, int64_t startPos, bool apply, bool playing = true, bool offlineRender = false) {
     std::vector<float> out; out.reserve(in.size()); std::vector<float> buf((size_t)block);
     for (size_t pos = 0; pos < in.size(); pos += (size_t)block) {
         const int n = (int)std::min<size_t>((size_t)block, in.size() - pos);
         std::memcpy(buf.data(), in.data() + pos, (size_t)n * sizeof(float));
         float* ch[1] = { buf.data() };
-        core.processBlock(ch, 1, n, TransportInfo{ playing, true, startPos + (int64_t)pos }, apply);
+        core.processBlock(ch, 1, n, TransportInfo{ playing, true, startPos + (int64_t)pos, offlineRender }, apply);
         out.insert(out.end(), buf.begin(), buf.begin() + n);
     }
     return out;
@@ -245,6 +245,12 @@ static void test_apply_once_blocksize_seek_loop_offline() {
     CHECK(core.appliedSamples() - before == ones.size());
     double worstRef = 0, maxG = 0; for (size_t i = 0; i < ref.size(); i += 17) { worstRef = std::max(worstRef, (double)std::fabs(ref[i] - sn->gainLinearAt((int64_t)i, sr))); maxG = std::max(maxG, (double)std::fabs(ref[i] - 1.0f)); }
     CHECK(worstRef < 1e-6); CHECK(maxG > 0.2);   // curve is non-trivial, and output == g (not g^2)
+    // Offline host bounce may report isPlaying=false. A valid absolute position
+    // plus offlineRender=true must still apply the exact same curve.
+    const uint64_t beforeOffline = core.appliedSamples();
+    const auto offline = run(core, ones, 1024, 0, true, false, true);
+    CHECK(offline == ref);
+    CHECK(core.appliedSamples() - beforeOffline == ones.size());
     // identical output for any block partition (bit-exact vs the 480 pass)
     std::mt19937 rng(7);
     for (int block : { 1, 3, 64, 1000, 4096 }) { const auto o = run(core, ones, block, 0, true); bool same = (o == ref); CHECK(same); }
@@ -259,6 +265,7 @@ static void test_apply_once_blocksize_seek_loop_offline() {
     // transport stopped or position unknown: bit-exact pass-through
     { std::vector<float> x(2000); for (size_t i = 0; i < x.size(); ++i) x[i] = (float)std::sin(0.01 * i); CHECK(run(core, x, 480, 100000, true, false) == x);
       std::vector<float> b = x; float* ch[1] = { b.data() }; core.processBlock(ch, 1, (int)b.size(), TransportInfo{ true, false, 0 }, true); CHECK(b == x);
+      std::vector<float> d = x; float* ch3[1] = { d.data() }; core.processBlock(ch3, 1, (int)d.size(), TransportInfo{ false, false, 0, true }, true); CHECK(d == x); // never guess a timeline position offline
       CHECK(run(core, x, 480, 100000, false, true) == x); }
 }
 
