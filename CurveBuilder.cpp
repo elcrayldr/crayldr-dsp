@@ -218,7 +218,7 @@ bool buildCurve(const AnalysisGrid& grid, const Settings& st, CurveData& out, Bu
     // lifted. The later peak guard remains authoritative.
     {
         const int radius = (st.mode == Mode::Natural) ? 3 : 2; // 35 ms / 25 ms total window
-        std::vector<float> local(N, 0.0f);
+        std::vector<float> local(N, kUncovered);
         for (int i = 0; i < N; ++i) {
             if (cls[i] != 1) continue;
             float sum = 0.0f;
@@ -236,7 +236,7 @@ bool buildCurve(const AnalysisGrid& grid, const Settings& st, CurveData& out, Bu
         const float detailLimit = (st.mode == Mode::Natural) ? 3.0f : 4.5f;
         for (const auto& e : ev) {
             for (int i = e.b; i < e.e; ++i) {
-                if (cls[i] != 1 || local[i] <= 0.0f) continue;
+                if (cls[i] != 1 || local[i] <= -999.0f) continue;
                 const float crest = pk[i] - db[i];
                 const float transientProtection = clampf(1.0f - (crest - 8.0f) / 12.0f, 0.20f, 1.0f);
                 float detail = (e.level - local[i]) * detailScale * transientProtection * amount;
