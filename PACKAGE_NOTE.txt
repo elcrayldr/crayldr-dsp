@@ -1,0 +1,12 @@
+CRAY LDR VOX LEVELER — GitHub-ready source package v0.4.1
+
+Based on v0.4. This package prepares the source tree for repository import.
+Changes:
+- Removes private user recording, processed renders, and user-specific gain curves.
+- Makes pluginval strictness level 5 a required CI gate (no continue-on-error).
+- Adds a GitHub release checklist and privacy/licensing notes.
+
+Important:
+- DSP core was tested separately in the development environment.
+- Full JUCE VST3 build has NOT yet been verified here.
+- No license has been selected; do not publish until the owner chooses one.
