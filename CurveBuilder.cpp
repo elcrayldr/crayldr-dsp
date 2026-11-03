@@ -218,7 +218,7 @@ bool buildCurve(const AnalysisGrid& grid, const Settings& st, CurveData& out, Bu
     // lifted. The later peak guard remains authoritative.
     {
         const int radius = (st.mode == Mode::Natural) ? 3 : 2; // 35 ms / 25 ms total window
-        std::vector<float> local(N, kUncovered);
+        std::vector<float> localEnvelope(N, kUncovered);
         for (int i = 0; i < N; ++i) {
             if (cls[i] != 1) continue;
             float sum = 0.0f;
@@ -226,20 +226,31 @@ bool buildCurve(const AnalysisGrid& grid, const Settings& st, CurveData& out, Bu
             for (int k = std::max(0, i - radius); k <= std::min(N - 1, i + radius); ++k) {
                 if (cls[k] == 1 && db[k] > -999.0f) { sum += db[k]; ++count; }
             }
-            if (count > 0) local[i] = sum / static_cast<float>(count);
+            if (count > 0) localEnvelope[i] = sum / static_cast<float>(count);
         }
 
-        // Use the take-level event reference, but avoid chasing isolated peaks.
-        // Detail correction is strongest on sustained voiced energy and fades
-        // near high-crest-factor attacks (plosives/consonants).
-        const float detailScale = (st.mode == Mode::Natural) ? 0.58f : 0.78f;
-        const float detailLimit = (st.mode == Mode::Natural) ? 3.0f : 4.5f;
+        // Make the intra-event contour zero-mean: it should reduce level
+        // movement inside a vowel without changing that event's plateau gain.
+        // Otherwise a percentile-based offset can accidentally lift a loud
+        // event and erase the intended loud/quiet syllable balance.
+        const float detailScale = (st.mode == Mode::Natural) ? 0.42f : 0.68f;
+        const float detailLimit = (st.mode == Mode::Natural) ? 2.0f : 3.5f;
         for (const auto& e : ev) {
+            double envelopeSum = 0.0;
+            int envelopeCount = 0;
             for (int i = e.b; i < e.e; ++i) {
-                if (cls[i] != 1 || local[i] <= -999.0f) continue;
+                if (cls[i] == 1 && localEnvelope[i] > -999.0f) {
+                    envelopeSum += localEnvelope[i];
+                    ++envelopeCount;
+                }
+            }
+            if (envelopeCount == 0) continue;
+            const float eventEnvelopeMean = static_cast<float>(envelopeSum / envelopeCount);
+            for (int i = e.b; i < e.e; ++i) {
+                if (cls[i] != 1 || localEnvelope[i] <= -999.0f) continue;
                 const float crest = pk[i] - db[i];
                 const float transientProtection = clampf(1.0f - (crest - 8.0f) / 12.0f, 0.20f, 1.0f);
-                float detail = (e.level - local[i]) * detailScale * transientProtection * amount;
+                float detail = (eventEnvelopeMean - localEnvelope[i]) * detailScale * transientProtection * amount;
                 detail = clampf(detail, -detailLimit, detailLimit);
                 tgt[i] = clampf(tgt[i] + detail, -range, range);
             }
