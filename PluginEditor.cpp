@@ -114,7 +114,7 @@ void VoxLevelerEditor::resized()
     status.setBounds(r.removeFromBottom(26));
     auto knobs = r.removeFromBottom(120);
     const int kw = knobs.getWidth() / 3;
-    for (auto* pair : { std::make_pair(&amountS, &amountL), std::make_pair(&rangeS, &rangeL), std::make_pair(&ceilS, &ceilL) })
+    for (auto pair : { std::make_pair(&amountS, &amountL), std::make_pair(&rangeS, &rangeL), std::make_pair(&ceilS, &ceilL) })
     {
         auto c = knobs.removeFromLeft(kw);
         pair->second->setBounds(c.removeFromTop(18));
